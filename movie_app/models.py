@@ -19,6 +19,7 @@ class Movie(models.Model):
 class Review(models.Model):
     text = models.TextField()
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='reviews')
+    stars = models.IntegerField(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')], null=True)
 
     def __str__(self):
         return f"Отзыв для {self.movie.title}"
