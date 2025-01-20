@@ -1,6 +1,12 @@
 from rest_framework import serializers
 from .models import Director, Movie, Review
 
+class DirectorItemSerializer(serializers.Serializer):
+    class Meta:
+        model = Director
+        fields = '__all__'
+
+
 class DirectorSerializer(serializers.ModelSerializer):
     movies_count = serializers.SerializerMethodField()
 
