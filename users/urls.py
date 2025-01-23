@@ -1,8 +1,8 @@
 from django.urls import path
-from users import views
+from users.views import RegisterAPIView, AuthorizeAPIView, SMSCodeAPIView
 
 urlpatterns = [
-    path('registration/', views.register_api_view),
-    path('authorization/', views.authorize_api_view),
-    path('SMSCode/', views.sms_code_api_view)
+    path('registration/', RegisterAPIView.as_view(), name='user-registration'),
+    path('authorization/', AuthorizeAPIView.as_view(), name='user-authorization'),
+    path('sms-code/', SMSCodeAPIView.as_view(), name='sms-code-verification'),
 ]

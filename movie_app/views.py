@@ -1,124 +1,133 @@
-from rest_framework.decorators import api_view
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from .models import Director, Movie, Review
-from .serializers import (DirectorSerializer, MovieSerializer, ReviewSerializer, DirectorItemSerializer,
-                          DirectorValidateSerializers, MovieValidateSerializers, ReviewValidateSerializers)
 from rest_framework import status
+from collections import OrderedDict
+from .models import Director, Movie, Review
+from .serializers import (
+    DirectorSerializer,
+    MovieSerializer,
+    ReviewSerializer,
+    DirectorItemSerializer,
+    DirectorValidateSerializers,
+    MovieValidateSerializers,
+    ReviewValidateSerializers,
+)
 
 
-@api_view(["GET", "PUT", "DELETE"])
-def director_detail_api_view(request, id):
-    try:
-        director = Director.objects.get(id=id)
-    except Director.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+class CustomPagination(PageNumberPagination):
+    def get_paginated_response(self, data):
+        return Response(
+            OrderedDict(
+                [
+                    ("total", self.page.paginator.count),
+                    ("next", self.get_next_link()),
+                    ("previous", self.get_previous_link()),
+                    ("results", data),
+                ]
+            )
+        )
 
-    if request.method == "GET":
-        data = DirectorSerializer(director).data
-        return Response(data=data)
-    elif request.method == "PUT":
+
+class DirectorListCreateAPIView(ListCreateAPIView):
+    queryset = Director.objects.all()
+    serializer_class = DirectorSerializer
+    pagination_class = CustomPagination
+
+    def create(self, request, *args, **kwargs):
         serializer = DirectorValidateSerializers(data=request.data)
         serializer.is_valid(raise_exception=True)
-        director.name = serializer.validated_data.get("name")
-        director.save()
-        return Response(data=DirectorItemSerializer(director).data, status=status.HTTP_201_CREATED)
-    elif request.method == "DELETE":
-        director.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        director = Director.objects.create(name=serializer.validated_data.get("name"))
+        return Response(
+            data=DirectorItemSerializer(director).data, status=status.HTTP_201_CREATED
+        )
 
 
-@api_view(["GET", "POST"])
-def directors_list_api_view(request):
-    if request.method == "GET":
-        directors = Director.objects.all()
-        list_ = DirectorSerializer(instance=directors, many=True).data
-        return Response(data=list_)
-    elif request.method == "POST":
+class DirectorDetailAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Director.objects.all()
+    serializer_class = DirectorSerializer
+    lookup_field = "id"
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
         serializer = DirectorValidateSerializers(data=request.data)
         serializer.is_valid(raise_exception=True)
-        director = Director.objects.create(name=serializer.validated_data.get('name'))
-        return Response(data=DirectorItemSerializer(director).data, status=status.HTTP_201_CREATED)
+        instance.name = serializer.validated_data.get("name")
+        instance.save()
+        return Response(
+            data=DirectorItemSerializer(instance).data, status=status.HTTP_201_CREATED
+        )
 
 
-@api_view(["GET", "PUT", "DELETE"])
-def movie_detail_api_view(request, id):
-    try:
-        movie = Movie.objects.get(id=id)
-    except Movie.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-    if request.method == "GET":
-        data = MovieSerializer(movie).data
-        return Response(data=data)
-    elif request.method == "PUT":
+class MovieListCreateAPIView(ListCreateAPIView):
+    queryset = Movie.objects.all()
+    serializer_class = MovieSerializer
+    pagination_class = CustomPagination
+
+    def create(self, request, *args, **kwargs):
         serializer = MovieValidateSerializers(data=request.data)
         serializer.is_valid(raise_exception=True)
-        movie.title = serializer.validated_data.get("title")
-        movie.description = serializer.validated_data.get("description")
-        movie.duration = serializer.validated_data.get("duration")
-        movie.director_id = serializer.validated_data.get("director")
-        movie.save()
-        return Response(data=MovieSerializer(movie).data, status=status.HTTP_201_CREATED)
-    elif request.method == "DELETE":
-        movie.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(["GET", "POST"])
-def movies_list_api_view(request):
-    if request.method == "GET":
-        movies = Movie.objects.all()
-        list_ = MovieSerializer(instance=movies, many=True).data
-        return Response(data=list_)
-    elif request.method == "POST":
-        serializer = MovieValidateSerializers(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
         movie = Movie.objects.create(
             title=serializer.validated_data.get("title"),
             description=serializer.validated_data.get("description"),
             duration=serializer.validated_data.get("duration"),
-            director_id=serializer.validated_data.get("director")
+            director_id=serializer.validated_data.get("director"),
+        )
+        return Response(
+            data=MovieSerializer(movie).data, status=status.HTTP_201_CREATED
         )
 
-        return Response(data=MovieSerializer(movie).data, status=status.HTTP_201_CREATED)
+
+class MovieDetailAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Movie.objects.all()
+    serializer_class = MovieSerializer
+    lookup_field = "id"
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = MovieValidateSerializers(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance.title = serializer.validated_data.get("title")
+        instance.description = serializer.validated_data.get("description")
+        instance.duration = serializer.validated_data.get("duration")
+        instance.director_id = serializer.validated_data.get("director")
+        instance.save()
+        return Response(
+            data=MovieSerializer(instance).data, status=status.HTTP_201_CREATED
+        )
 
 
-@api_view(["GET", "PUT", "DELETE"])
-def review_detail_api_view(request, id):
-    try:
-        review = Review.objects.get(id=id)
-    except Review.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-    if request.method == "GET":
-        data = ReviewSerializer(review).data
-        return Response(data=data)
-    elif request.method == "PUT":
+class ReviewListCreateAPIView(ListCreateAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    pagination_class = CustomPagination
+
+    def create(self, request, *args, **kwargs):
         serializer = ReviewValidateSerializers(data=request.data)
         serializer.is_valid(raise_exception=True)
-        review.text = serializer.validated_data.get("text")
-        review.stars = serializer.validated_data.get("stars")
-        review.movie_id = serializer.validated_data.get("movie")
-        review.save()
-        return Response(data=ReviewSerializer(review).data, status=status.HTTP_201_CREATED)
-    elif request.method == "DELETE":
-        review.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(["GET", "POST"])
-def reviews_list_api_view(request):
-    if request.method == "GET":
-        reviews = Review.objects.all()
-        list_ = ReviewSerializer(instance=reviews, many=True).data
-        return Response(data=list_)
-    elif request.method == "POST":
-        serializer = ReviewValidateSerializers(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
         review = Review.objects.create(
             text=serializer.validated_data.get("text"),
             stars=serializer.validated_data.get("stars"),
-            movie_id=serializer.validated_data.get("movie")
+            movie_id=serializer.validated_data.get("movie"),
+        )
+        return Response(
+            data=ReviewSerializer(review).data, status=status.HTTP_201_CREATED
         )
 
-        return Response(data=ReviewSerializer(review).data, status=status.HTTP_201_CREATED)
+
+class ReviewDetailAPIView(RetrieveUpdateDestroyAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    lookup_field = "id"
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = ReviewValidateSerializers(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance.text = serializer.validated_data.get("text")
+        instance.stars = serializer.validated_data.get("stars")
+        instance.movie_id = serializer.validated_data.get("movie")
+        instance.save()
+        return Response(
+            data=ReviewSerializer(instance).data, status=status.HTTP_201_CREATED
+        )
